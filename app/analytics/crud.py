@@ -51,4 +51,4 @@ async def get_screenshot_by_id(id: str) -> dict:
         return None
     except Exception as e:
         print(f"Error retrieving screenshot by ID: {str(e)}")
-        return None 
+        return None
