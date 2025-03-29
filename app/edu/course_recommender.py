@@ -68,75 +68,64 @@ class UserProfiledCourseRecommender:
                 f"JSON Decode Error: {e}\nPartial JSON:\n{json_str[e.pos-50:e.pos+50]}")
             raise
 
-    def recommend_courses(self, skill_ratings=None):
+    def recommend_courses(self, skill_ratings):
         """
-        Recommend courses based on a comprehensive user profile and skill ratings.
+        Recommend courses based on user skill ratings.
         """
         try:
-
-            # Format skill ratings for the prompt if available
-            skill_analysis = ""
-            if skill_ratings:
-                skill_analysis = f"""
-                SKILL RATINGS ANALYSIS:
-                - Creative: {skill_ratings.get('creative', 'Not provided')}
-                - Engagement: {skill_ratings.get('engagement', 'Not provided')}
-                - Technical Proficiency: {skill_ratings.get('technical_proficiency', 'Not provided')}
-                - Strategic Thinking: {skill_ratings.get('strategic_thinking', 'Not provided')}
-                - Clarity: {skill_ratings.get('clarity', 'Not provided')}
-
-                Use these skill ratings to:
-                1. Match course difficulty levels with the user's technical proficiency
-                2. Consider courses that align with their strengths
-                3. Suggest courses that can help improve areas with lower ratings
-                """
-
+            # Create a query based on skill ratings
+            query = f"User with skills: "
+            for skill, rating in skill_ratings.items():
+                if skill != "id":  # Skip the ID field
+                    query += f"{skill}: {rating}, "
+            
+            # Retrieve relevant courses using the vector store
+            relevant_docs = self.retriever.invoke(query)
+            courses_context = "\n\n".join([doc.page_content for doc in relevant_docs])
+            
             # Prepare prompt for course recommendations
             prompt = f"""You are an AI Course Recommendation Specialist.
 
+AVAILABLE COURSES (ONLY RECOMMEND FROM THIS LIST):
+{courses_context}
 
-            {skill_analysis}
+USER SKILL RATINGS:
+{json.dumps(skill_ratings, indent=2)}
 
-            COURSE RECOMMENDATION GUIDELINES:
-            1. Analyze the user's background, goals, and learning preferences.
-            2. Recommend 5-4 courses that precisely match the user's needs.
-            3. Consider factors like:
-            - Current skill level (based on skill ratings)
-            - Career aspirations
-            - Learning style
-            - Time availability
-            - Specific interests
-            - Areas for improvement
+COURSE RECOMMENDATION GUIDELINES:
+1. CRITICALLY IMPORTANT: ONLY recommend courses from the AVAILABLE COURSES list provided above.
+2. Do NOT make up or hallucinate any course titles, links, or details.
+3. Recommend 3-5 courses that match the user's skill levels.
+4. For lower-rated skills, recommend beginner-friendly courses.
+5. For higher-rated skills, recommend more advanced courses.
 
-            JSON OUTPUT FORMAT:
-            ```json
-            {{
-                "recommendations": [
-                    {{
-                        "Course Title": "EXACT title from CSV",
-                        "Difficulty": "Match exactly from CSV",
-                        "Hours": "Number from CSV",
-                        "Link": "Direct URL from CSV",
-                        "Rationale": "Why this course matches the user's profile and skill ratings",
-                        "Key Learning Outcomes": ["Outcome 1", "Outcome 2"],
-                        "Skill Alignment": {{
-                            "primary_skill": "Main skill this course addresses",
-                            "difficulty_match": "How well the course difficulty matches user's technical level"
-                        }}
-                    }}
-                ],
-                "profile_analysis": {{
-                    "strengths": ["Strength 1", "Strength 2"],
-                    "areas_for_improvement": ["Area 1", "Area 2"],
-                    "recommended_learning_path": "Brief learning path description based on skill ratings"
-                }}
-            }}
-            ```
-            CRITICAL INSTRUCTIONS:
-            - USE ONLY COURSES FROM THE PROVIDED DATA.
-            - DOUBLE-CHECK JSON SYNTAX: ensure commas between properties, no trailing commas, proper quotation marks, and valid array formatting.
-            - Consider the user's skill ratings when recommending course difficulty levels.
-            """
+JSON OUTPUT FORMAT:
+```json
+{{
+    "recommendations": [
+        {{
+            "Course Title": "EXACT title from the available courses list",
+            "Difficulty": "EXACT difficulty level from the available courses",
+            "Hours": "EXACT hours from the available courses",
+            "Link": "EXACT link from the available courses",
+            "Rationale": "Why this course matches the user's skills profile",
+            "Key Learning Outcomes": ["Outcome 1", "Outcome 2"]
+        }}
+    ],
+    "profile_analysis": {{
+        "strengths": ["Skills rated highest"],
+        "areas_for_improvement": ["Skills rated lowest"],
+        "recommended_learning_path": "Brief learning path description"
+    }}
+}}
+```
+
+CRITICAL INSTRUCTIONS:
+- ONLY USE COURSES FROM THE PROVIDED AVAILABLE COURSES LIST.
+- VERIFY each recommended course exists in the AVAILABLE COURSES list.
+- If you're unsure if a course exists, DO NOT recommend it.
+- DOUBLE-CHECK JSON syntax for validity.
+"""
             # Generate recommendations using LLM
             response = self.llm.invoke(prompt)
             # Extract and parse JSON from the LLM response

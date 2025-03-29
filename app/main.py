@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.edu.router import router as edu_router
-
+from app.creative.router import router as creative_router
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -20,6 +20,7 @@ app.add_middleware(
 )
 
 app.include_router(edu_router)
+app.include_router(creative_router)
 
 
 @app.get("/")
