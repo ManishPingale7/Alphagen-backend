@@ -95,7 +95,7 @@ USER SKILL RATINGS:
 COURSE RECOMMENDATION GUIDELINES:
 1. CRITICALLY IMPORTANT: ONLY recommend courses from the AVAILABLE COURSES list provided above.
 2. Do NOT make up or hallucinate any course titles, links, or details.
-3. Recommend 3-5 courses that match the user's skill levels and strength and weakness.
+3. Recommend 4-6 courses that match the user's skill levels and strength and weakness.
 4. For lower-rated skills, recommend beginner-friendly courses.
 5. For higher-rated skills, recommend more advanced courses.
 
