@@ -3,6 +3,7 @@ from app.edu.router import router as edu_router
 from app.creative.router import router as creative_router
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from app.analytics.router import router as analytics_router
 
 app = FastAPI(title="AlphaGen")
 
@@ -20,6 +21,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.include_router(edu_router)
 app.include_router(creative_router)
+app.include_router(analytics_router)
 
 
 @app.get("/")
