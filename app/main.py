@@ -1,4 +1,6 @@
-from fastapi import FastAPI 
+from fastapi import FastAPI
+from app.edu.router import router as edu_router
+
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -14,9 +16,10 @@ app.add_middleware(
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],  
-    allow_headers=["*"],  
+    allow_headers=["*"],
 )
 
+app.include_router(edu_router)
 
 
 @app.get("/")
