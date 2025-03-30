@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 # Add imports for MusicGen
 from audiocraft.models import musicgen
 import time
+import traceback
 
 load_dotenv()
 
@@ -83,6 +84,7 @@ async def save_upload_file(upload_file: UploadFile, destination: str):
 
 def process_videos_worker(job_id: str, music_file: str, video_files: List[str]):
     """Separate process function for video processing"""
+    generator = None
     try:
         # Load job from storage
         job = JobStorage.load_job(job_id)
@@ -100,7 +102,7 @@ def process_videos_worker(job_id: str, music_file: str, video_files: List[str]):
             # Save updated state
             JobStorage.save_job(job_id, job)
 
-        # Create BeatSyncVideoGenerator instance
+        # Create BeatSyncVideoGenerator instance with proper error handling
         generator = BeatSyncVideoGenerator(
             music_path=music_file,
             video_clips_paths=video_files,
@@ -121,16 +123,36 @@ def process_videos_worker(job_id: str, music_file: str, video_files: List[str]):
 
     except Exception as e:
         # Update job with error
+        print(f"Error in process_videos_worker: {e}")
+        traceback.print_exc()
+        
         job = JobStorage.load_job(job_id)
         job.status = "failed"
         job.error = str(e)
         job.progress = 0
         JobStorage.save_job(job_id, job)
+    finally:
+        # IMPORTANT: Close the generator properly if it exists
+        if generator:
+            try:
+                for clip in generator.clips:
+                    try:
+                        clip.close()
+                    except:
+                        pass
+            except:
+                pass
         
-        # Clean up files
+        # Add a small delay before trying to clean up files
+        time.sleep(1)
+        
+        # Clean up files with better error handling
         for file in video_files + [music_file]:
-            if os.path.exists(file):
-                os.remove(file)
+            try:
+                if os.path.exists(file):
+                    os.remove(file)
+            except Exception as e:
+                print(f"Warning: Could not delete temporary file {file}: {e}")
 
 
 @router.post("/sync-videos")
